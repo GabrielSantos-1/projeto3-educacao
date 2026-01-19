@@ -28,7 +28,7 @@ export default function HomeRoute() {
   return (
     <div className="grid" style={{ gap: 16 }}>
       <section className="card" style={{ padding: 18 }}>
-        {/* ✅ barra do aluno */}
+        {/* ✅ Aluno atual + Trocar aluno */}
         <div
           style={{
             display: "flex",
@@ -49,7 +49,6 @@ export default function HomeRoute() {
               clearCurrentStudent();
               nav("/login", { replace: true });
             }}
-            aria-label="Trocar aluno"
           >
             🔁 Trocar aluno
           </button>
@@ -95,24 +94,6 @@ export default function HomeRoute() {
             <li>Use “Tutoriais” para aprender por etapas (marcando o que concluiu).</li>
             <li>Use o “Jogo” para treinar digitação com feedback rápido.</li>
           </ul>
-        </div>
-      </section>
-
-      <section className="card" style={{ padding: 18 }}>
-        <h2 style={{ margin: 0, fontSize: 18 }}>Dicas rápidas</h2>
-        <div className="grid grid-2" style={{ marginTop: 12 }}>
-          <div className="card" style={{ padding: 14, background: "rgba(255,255,255,0.04)" }}>
-            <strong>Leitura fácil</strong>
-            <p className="p" style={{ marginTop: 6 }}>
-              Preferimos textos curtos e botões grandes para evitar confusão.
-            </p>
-          </div>
-          <div className="card" style={{ padding: 14, background: "rgba(255,255,255,0.04)" }}>
-            <strong>Progresso seguro</strong>
-            <p className="p" style={{ marginTop: 6 }}>
-              O progresso fica salvo neste navegador. Se limpar dados do navegador, pode apagar o progresso.
-            </p>
-          </div>
         </div>
       </section>
     </div>

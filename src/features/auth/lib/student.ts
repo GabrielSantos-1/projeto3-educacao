@@ -5,11 +5,22 @@ export function normalizeNick(input: string) {
 }
 
 export function setCurrentStudent(nick: string) {
-  localStorage.setItem(CURRENT_KEY, nick);
+  const normalized = normalizeNick(nick);
+
+  // ✅ não salva vazio
+  if (!normalized) return;
+
+  localStorage.setItem(CURRENT_KEY, normalized);
 }
 
 export function getCurrentStudent(): string | null {
-  return localStorage.getItem(CURRENT_KEY);
+  const raw = localStorage.getItem(CURRENT_KEY);
+
+  // ✅ se estiver vazio, trata como null
+  if (!raw) return null;
+
+  const normalized = normalizeNick(raw);
+  return normalized ? normalized : null;
 }
 
 export function clearCurrentStudent() {
