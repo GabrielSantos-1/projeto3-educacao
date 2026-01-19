@@ -1,7 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { tutorials } from "../../features/tutorials/data/tutorials";
 import { loadProgress } from "../../features/tutorials/lib/storage";
 import { calcPercent } from "../../features/tutorials/lib/progress";
+
+import { clearCurrentStudent, getCurrentStudent } from "../../features/auth/lib/student";
 
 function sumProgress() {
   const progress = loadProgress();
@@ -19,11 +21,40 @@ function sumProgress() {
 }
 
 export default function HomeRoute() {
+  const nav = useNavigate();
+  const student = getCurrentStudent();
   const { totalSteps, doneSteps, pct } = sumProgress();
 
   return (
     <div className="grid" style={{ gap: 16 }}>
       <section className="card" style={{ padding: 18 }}>
+        {/* ✅ barra do aluno */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ opacity: 0.85 }}>
+            Aluno: <strong>{student ?? "—"}</strong>
+          </div>
+
+          <button
+            className="btn"
+            onClick={() => {
+              clearCurrentStudent();
+              nav("/login", { replace: true });
+            }}
+            aria-label="Trocar aluno"
+          >
+            🔁 Trocar aluno
+          </button>
+        </div>
+
         <h1 className="h1">Plataforma Educacional para Iniciantes</h1>
         <p className="p">
           Tutoriais passo a passo + mini jogo de digitação. Tudo com botões grandes e progresso salvo no computador

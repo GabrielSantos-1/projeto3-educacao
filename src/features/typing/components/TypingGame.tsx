@@ -1,6 +1,8 @@
+/* eslint-disable react-hooks/purity */
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { Difficulty, GameState, TypingResult } from "../types";
-import { calcAccuracy, calcWpm } from "../lib/metrics";
+import { calcAccuracy, calcWpm, countCorrectChars } from "../lib/metrics";
 import { pickText } from "../lib/texts";
 import { clearHistory, loadHistory, saveResult } from "../lib/storage";
 
@@ -10,6 +12,15 @@ function uid() {
 
 function format2(n: number) {
   return Number.isFinite(n) ? n.toFixed(2) : "0.00";
+}
+
+function computeErrors(typed: string, target: string) {
+  const len = Math.min(typed.length, target.length);
+  let err = 0;
+  for (let i = 0; i < len; i++) {
+    if (typed[i] !== target[i]) err++;
+  }
+  return err;
 }
 
 export default function TypingGame() {
@@ -25,36 +36,46 @@ export default function TypingGame() {
   const timerRef = useRef<number | null>(null);
   const startTsRef = useRef<number | null>(null);
 
-  const history = useMemo(() => loadHistory(), []); // recarrega ao finalizar/limpar
+  // ✅ história como state pra atualizar quando salvar/limpar
+  const [history, setHistory] = useState(() => loadHistory());
 
-  // compara caractere a caractere (simples, eficiente e transparente)
+  // ✅ métricas corretas (caractere por caractere)
   const { typedChars, correctChars, errors } = useMemo(() => {
-    const normalizar = (texto: string) =>
-      texto.trim().toLowerCase().replace(/[.,!?]/g, "");
+  const typed = input;
+  const targetText = target;
 
-    const palavrasCorretas = normalizar(target).split(" ");
-    const palavrasDigitadas = normalizar(input).split(" ");
+  const typedLen = typed.length;
+  const correctLen = countCorrectChars(typed, targetText);
 
-    let corretas = 0;
-    let err =0;
+  // erros = chars digitados que NÃO batem com o alvo (posição a posição)
+  const len = Math.min(typedLen, targetText.length);
+  let err = 0;
 
-      for (let i = 0; i < palavrasCorretas.length; i++) {
-        if (palavrasDigitadas[i] === palavrasCorretas[i]) {
-          corretas++ ;
-        } else if (palavrasDigitadas[i] !== undefined) {
-          err++;
-        }
-      }
-    
-    return {
-      typedChars: input.length,
-      correctChars: corretas, // agora conta palavras corretas
-      errors: err,
-    };
-  }, [input, target]);
+  for (let i = 0; i < len; i++) {
+    if (typed[i] !== targetText[i]) err++;
+  }
 
-  const accuracy = useMemo(() => calcAccuracy(correctChars, typedChars), [correctChars, typedChars]);
-  const wpm = useMemo(() => calcWpm(correctChars, Math.max(elapsed, 1)), [correctChars, elapsed]);
+  // se digitou além do tamanho do alvo, isso conta como erro também
+  if (typedLen > targetText.length) {
+    err += typedLen - targetText.length;
+  }
+
+  return {
+    typedChars: typedLen,
+    correctChars: correctLen,
+    errors: err,
+  };
+}, [input, target]);
+
+const accuracy = useMemo(() => {
+  if (input.length === target.length && input === target) return 100;
+  return calcAccuracy(correctChars, typedChars);
+}, [input, target, correctChars, typedChars])
+
+  const wpm = useMemo(
+    () => calcWpm(correctChars, Math.max(elapsed, 1)),
+    [correctChars, elapsed]
+  );
 
   function stopTimer() {
     if (timerRef.current !== null) {
@@ -70,7 +91,6 @@ export default function TypingGame() {
     setElapsed(0);
     setState("running");
     setTimeout(() => inputRef.current?.focus(), 0);
-    // eslint-disable-next-line react-hooks/purity
     startTsRef.current = Date.now();
 
     timerRef.current = window.setInterval(() => {
@@ -82,23 +102,30 @@ export default function TypingGame() {
     }, 200);
   }
 
-  function finishGame(finalElapsed?: number) {
+  // ✅ robusto: permite finalizar usando o texto mais recente (evita salvar 1 char a menos)
+  function finishGame(finalElapsed?: number, finalInput?: string) {
     stopTimer();
     const e = typeof finalElapsed === "number" ? finalElapsed : elapsed;
+
+    const typed = finalInput ?? input;
+    const typedLen = typed.length;
+    const correctLen = countCorrectChars(typed, target);
+    const err = computeErrors(typed, target);
 
     const result: TypingResult = {
       id: uid(),
       dateIso: new Date().toISOString(),
       difficulty,
       durationSec,
-      typedChars,
-      correctChars,
-      errors,
-      wpm: calcWpm(correctChars, Math.max(e, 1)),
-      accuracy: calcAccuracy(correctChars, typedChars),
+      typedChars: typedLen,
+      correctChars: correctLen,
+      errors: err,
+      wpm: calcWpm(correctLen, Math.max(e, 1)),
+      accuracy: calcAccuracy(correctLen, typedLen),
     };
 
     saveResult(result);
+    setHistory(loadHistory());
     setState("finished");
   }
 
@@ -114,9 +141,14 @@ export default function TypingGame() {
     return () => stopTimer();
   }, []);
 
-  // render texto com realce do que foi digitado
+  // ✅ render do alvo com realce
   const renderedTarget = useMemo(() => {
-    const spans = [];
+    const spans: ReactNode[] = [];
+
+
+
+
+
     for (let i = 0; i < target.length; i++) {
       const ch = target[i];
       const typedCh = input[i];
@@ -132,6 +164,7 @@ export default function TypingGame() {
         </span>
       );
     }
+
     return spans;
   }, [target, input]);
 
@@ -167,6 +200,7 @@ export default function TypingGame() {
         </label>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+
           {state !== "running" ? (
             <button onClick={startGame}>Iniciar</button>
           ) : (
@@ -198,21 +232,47 @@ export default function TypingGame() {
       </div>
 
       <textarea
-        value={input}
-        onChange={(e) => setInput(e.target.value.length >= target.length ? (finishGame(), e.target.value) : e.target.value)}
-        disabled={state !== "running"}
-        rows={3}
-        style={{ width: "100%", fontSize: 16, padding: 10 }}
-        placeholder={state === "running" ? "Digite aqui..." : "Clique em Iniciar para começar"}
-        ref={inputRef}
-      />
+  value={input}
+  onChange={(e) => {
+    // remove ENTER / quebra de linha
+    let value = e.target.value.replace(/\r?\n/g, "");
+
+    // trava no tamanho do target (impede 1 char a mais)
+    if (value.length > target.length) {
+      value = value.slice(0, target.length);
+    }
+
+    setInput(value);
+
+    // finaliza exatamente no tamanho correto
+    if (state === "running" && value.length === target.length) {
+      finishGame(undefined, value);
+    }
+  }}
+  disabled={state !== "running"}
+  rows={3}
+  style={{ width: "100%", fontSize: 16, padding: 10 }}
+  placeholder={state === "running" ? "Digite aqui..." : "Clique em Iniciar para começar"}
+  ref={inputRef}
+/>
+
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 12 }}>
-        <div><strong>WPM:</strong> {format2(wpm)}</div>
-        <div><strong>Precisão:</strong> {format2(accuracy)}%</div>
-        <div><strong>Erros:</strong> {errors}</div>
-        <div><strong>Corretos:</strong> {correctChars}</div>
-        <div><strong>Digitados:</strong> {typedChars}</div>
+        <div>
+          <strong>WPM:</strong> {format2(wpm)}
+        </div>
+        <div>
+          <strong>Precisão:</strong> {format2(accuracy)}%
+        </div>
+        <div>
+          <strong>Erros:</strong> {errors}
+        </div>
+        <div>
+          <strong>Corretos:</strong> {correctChars}
+        </div>
+        <div>
+          <strong>Digitados:</strong> {typedChars}
+        </div>
       </div>
 
       <hr style={{ margin: "18px 0" }} />
@@ -222,6 +282,7 @@ export default function TypingGame() {
         <button
           onClick={() => {
             clearHistory();
+            setHistory([]);
             reset();
           }}
         >
