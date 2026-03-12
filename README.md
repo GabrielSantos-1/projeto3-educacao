@@ -14,7 +14,7 @@ O objetivo é oferecer uma experiência simples e acessível para pessoas que es
 
 ### Tela inicial
 
-![home](docs/home.png)
+![Home](docs/Home.png)
 
 ### Tutoriais
 
