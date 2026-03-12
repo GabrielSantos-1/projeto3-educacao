@@ -1,216 +1,160 @@
-# Projeto 3 — Plataforma Educacional para Iniciantes (Tutoriais + Jogo de Digitação)
+# Projeto 3 — Plataforma Educacional para Iniciantes
 
-Aplicação web desenvolvida com foco em **iniciantes** (incluindo idosos), oferecendo uma experiência simples, direta e acessível para aprender informática básica por meio de:
+Aplicação web educacional criada para ajudar iniciantes a aprender habilidades digitais básicas através de **tutoriais passo a passo** e **treino de digitação interativo**.
 
-- ✅ **Tutoriais passo a passo** com progresso salvo
-- ✅ **Mini jogo de digitação** com métricas (WPM, precisão, erros) e histórico
-- ✅ **Login por apelido (sem senha)** para salvar o progresso de cada aluno no mesmo computador
-
-> MVP sem backend: os dados ficam salvos no **navegador** via `localStorage`.
+O objetivo é oferecer uma experiência simples e acessível para pessoas que estão começando a usar computadores ou smartphones.
 
 ---
 
-## ✅ Objetivo do projeto
+## Interface
 
-Criar uma plataforma educacional leve, intuitiva e escalável, capaz de:
+### Tela de Login
 
-- Ensinar habilidades digitais essenciais (Word, internet, celular, etc.)
-- Acompanhar o progresso do aluno com **salvamento automático**
-- Permitir uso em **laboratórios/escolas**, com vários alunos no mesmo PC
-- Evoluir futuramente para módulos maiores (Segurança Digital, Compras Online, Videoconferência)
+![login](docs/login.png)
 
----
+### Tela inicial
 
-## 🚀 O que já foi implementado (até agora)
+![home](docs/home.png)
 
-### ✅ Etapa 1 — Estrutura do projeto (base sólida)
-- Projeto criado com **Vite + React + TypeScript**
-- Organização modular por `features`
-- Rotas principais separadas e limpas
-- Estilo simples e responsivo (base pronta para evoluir)
+### Tutoriais
 
----
+![tutoriais](docs/tutoriais.png)
 
-### ✅ Etapa 2 — Sistema de rotas (React Router)
-Rotas ativas no projeto:
-- `/login` → tela inicial (apelido)
-- `/` → Home
-- `/tutoriais` → lista de tutoriais
-- `/tutoriais/:tutorialId` → detalhes do tutorial + checklist
-- `/jogo` → mini jogo de digitação
+### Jogo de digitação
 
----
+![minijogodedigitacao](docs/minijogodedigitacao.png)
 
-### ✅ Etapa 3 — Login por apelido (sem senha)
-Implementado um login simples para salvar tudo separado por aluno:
+## Visão geral
 
-✅ Funciona assim:
-1. O aluno digita um **apelido**
-2. O sistema registra como aluno atual
-3. Todo progresso e histórico ficam ligados ao apelido
+A plataforma permite que um aluno:
 
-📌 Isso permite múltiplos alunos no mesmo computador sem misturar dados.
+- acompanhar seu progresso em tutoriais básicos
+- treinar digitação com feedback em tempo real
+- evoluir de nível automaticamente
+- salvar progresso localmente
+
+Todo o progresso é salvo no navegador utilizando **localStorage**, permitindo continuar de onde parou.
 
 ---
 
-### ✅ Etapa 4 — Sistema de progresso dos tutoriais
-- Cada tutorial possui passos (`steps`)
-- O aluno marca os passos concluídos
-- O progresso é calculado automaticamente
-- Progresso salvo no `localStorage`
+## Funcionalidades
 
-✅ Home mostra:
-- total de passos concluídos
-- total de passos disponíveis
-- barra de progresso (%)
+### Sistema de aluno
 
----
+- identificação simples por nome
+- troca rápida de aluno
+- progresso individual salvo localmente
 
-### ✅ Etapa 5 — Mini Jogo de Digitação (Typing Game)
-Funcionalidades implementadas:
-- seleção de dificuldade (`easy / medium / hard`)
-- seleção de duração (30s / 60s / 90s)
-- destaque do texto digitado vs texto alvo
-- métricas em tempo real:
-  - **WPM**
-  - **Precisão**
-  - Erros
-  - Corretos
-  - Digitados
-- histórico com os **últimos 50 resultados**
-- botão para limpar histórico
+### Tutoriais educacionais
 
-✅ Correção importante aplicada:
-- **Precisão = 100%** quando o texto digitado fica **idêntico ao texto alvo**
-- controle de input para evitar quebra de linha e caracteres extras
+Tutoriais divididos por categorias:
 
----
+- Internet
+- E-mail
+- Celular
+- Word
 
-## 🧠 Persistência (como os dados são salvos)
+Cada tutorial possui:
 
-O projeto salva dados no navegador via `localStorage`.
+- passos sequenciais
+- marcação de progresso
+- barra de conclusão
 
-📌 Isso significa:
-- Não precisa login real nem servidor
-- Funciona offline
-- Porém, se limpar dados do navegador, pode apagar o progresso
+### Mini jogo de digitação
 
-### Chaves principais (exemplo)
-- Aluno atual:
-  - `p3_current_student`
+Treinador de digitação com:
 
-- Progresso dos tutoriais (por aluno):
-  - `p3_tutorial_progress_v1:<apelido>`
-
-- Histórico do jogo (por aluno):
-  - `p3_typing_history_v1:<apelido>`
+- níveis de dificuldade
+- duração configurável
+- cálculo de WPM (palavras por minuto)
+- precisão
+- contagem de erros
+- histórico das últimas sessões
 
 ---
 
-## 🧱 Tecnologias usadas
+## Tecnologias utilizadas
 
-- **React**
-- **TypeScript**
-- **Vite**
-- **React Router**
-- **localStorage**
-
----
-
-## 📁 Estrutura do projeto (resumo)
-
-src/
-├─ app/
-│ ├─ layout/ # Layout com navegação
-│ └─ routes/ # Rotas (login, home, tutoriais, jogo)
-│
-├─ features/
-│ ├─ auth/ # aluno atual (apelido)
-│ ├─ tutorials/ # dados + progresso
-│ └─ typing/ # jogo (textos, métricas, histórico)
-│
-├─ assets/
-├─ App.tsx
-├─ main.tsx
-└─ index.css
-
+- React
+- TypeScript
+- Vite
+- React Router
+- CSS
 
 ---
 
-## ✅ Como rodar localmente
+## Estrutura do projeto
 
-### Pré-requisitos
-- Node.js 18+ recomendado
-- npm
+src
+app
+routes
+features
+typing
+tutorials
+lib
 
-### Instalação
-```bash
+Organização baseada em **features**, separando lógica do jogo, rotas e tutoriais.
+
+---
+
+## Execução do projeto
+
+Clone o repositório:
+
+git clone https://github.com/GabrielSantos-1/projeto3-educacao.git
+
+Instale dependências:
+
 npm install
 
+Execute em modo desenvolvimento:
 
-Rodar em modo desenvolvimento
 npm run dev
 
+A aplicação estará disponível em:
 
-Acesse no navegador:
+http://localhost:5173
 
-http://localhost:5173/login
+---
 
-📦 Build de produção
-npm run build
-npm run preview
+## Status do projeto
 
-⚠️ Limitações atuais do MVP
+Versão atual: **MVP funcional**
 
-Não existe autenticação real (qualquer um pode usar qualquer apelido)
+Inclui:
 
-Dados ficam só no navegador
+- sistema de aluno
+- tutoriais com progresso
+- mini jogo de digitação
+- armazenamento local
 
-Sem sincronização em nuvem
+---
 
-Se limpar cache/dados, pode perder progresso
+## Roadmap futuro
 
-✅ Isso é intencional no MVP: foco total em simplicidade + funcionalidade local.
+Possíveis evoluções do projeto:
 
-🛣️ Planos futuros (evolução do projeto)
-Próximas melhorias (curto prazo)
+- autenticação real com backend
+- sincronização de progresso em banco de dados
+- ranking de digitação
+- dashboard para professores
+- novos módulos educacionais
+- deploy público da aplicação
 
-Tela “últimos apelidos usados” (seleção rápida)
+---
 
-Botão “trocar aluno”
+## Objetivo do projeto
 
-Filtro por categoria nos tutoriais (Celular, Internet, Word, etc.)
+Este projeto faz parte de um conjunto de aplicações desenvolvidas para estudo de:
 
-Botão “Continuar” indo para o primeiro passo não concluído
+- desenvolvimento front-end
+- arquitetura de aplicações React
+- experiência do usuário para iniciantes em tecnologia
 
-Melhorias no jogo (médio prazo)
+---
 
-Ranking local por aluno
+## Autor
 
-Medalhas/conquistas (ex: 100% precisão 5x)
-
-Modo treino infinito (sem tempo)
-
-Textos maiores e por nível
-
-Evolução para plataforma completa (longo prazo)
-
-Módulo: Segurança Digital
-
-golpes e phishing
-
-senhas fortes
-
-cuidados com Pix e links
-
-Módulo: Compras/Pagamentos Online
-
-Módulo: Videoconferência
-
-Exportar/importar progresso (JSON)
-
-Persistência em nuvem (Firebase ou API própria)
-
-📌 Autor
-
-Gabriel Santos
+Gabriel Santos  
+GitHub:  
+https://github.com/GabrielSantos-1
