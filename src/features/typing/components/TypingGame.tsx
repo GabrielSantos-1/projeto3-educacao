@@ -6,6 +6,8 @@ import { calcAccuracy, calcWpm, countCorrectChars } from "../lib/metrics";
 import { pickText } from "../lib/texts";
 import { clearHistory, loadHistory, saveResult } from "../lib/storage";
 
+const LEVEL_GOAL = 10;
+
 function uid() {
   return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
@@ -17,9 +19,15 @@ function format2(n: number) {
 function computeErrors(typed: string, target: string) {
   const len = Math.min(typed.length, target.length);
   let err = 0;
+
   for (let i = 0; i < len; i++) {
     if (typed[i] !== target[i]) err++;
   }
+
+  if (typed.length > target.length) {
+    err += typed.length - target.length;
+  }
+
   return err;
 }
 
@@ -30,52 +38,46 @@ export default function TypingGame() {
   const [state, setState] = useState<GameState>("idle");
   const [target, setTarget] = useState<string>(() => pickText("easy"));
   const [input, setInput] = useState<string>("");
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const [elapsed, setElapsed] = useState<number>(0);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const timerRef = useRef<number | null>(null);
   const startTsRef = useRef<number | null>(null);
+  const hasFinishedRef = useRef(false);
 
-  // ✅ história como state pra atualizar quando salvar/limpar
-  const [history, setHistory] = useState(() => loadHistory());
+  const [elapsed, setElapsed] = useState<number>(0);
+  const [history, setHistory] = useState<TypingResult[]>(() => loadHistory());
 
-  // ✅ métricas corretas (caractere por caractere)
+  const [levelProgress, setLevelProgress] = useState<number>(0);
+  const [autoLevelEnabled, setAutoLevelEnabled] = useState<boolean>(true);
+
+  const [sessionTypedChars, setSessionTypedChars] = useState<number>(0);
+  const [sessionCorrectChars, setSessionCorrectChars] = useState<number>(0);
+  const [sessionErrors, setSessionErrors] = useState<number>(0);
+
   const { typedChars, correctChars, errors } = useMemo(() => {
-  const typed = input;
-  const targetText = target;
+    const typed = input;
+    const targetText = target;
 
-  const typedLen = typed.length;
-  const correctLen = countCorrectChars(typed, targetText);
+    const typedLen = typed.length;
+    const correctLen = countCorrectChars(typed, targetText);
 
-  // erros = chars digitados que NÃO batem com o alvo (posição a posição)
-  const len = Math.min(typedLen, targetText.length);
-  let err = 0;
+    const len = Math.min(typedLen, targetText.length);
+    let err = 0;
 
-  for (let i = 0; i < len; i++) {
-    if (typed[i] !== targetText[i]) err++;
-  }
+    for (let i = 0; i < len; i++) {
+      if (typed[i] !== targetText[i]) err++;
+    }
 
-  // se digitou além do tamanho do alvo, isso conta como erro também
-  if (typedLen > targetText.length) {
-    err += typedLen - targetText.length;
-  }
+    if (typedLen > targetText.length) {
+      err += typedLen - targetText.length;
+    }
 
-  return {
-    typedChars: typedLen,
-    correctChars: correctLen,
-    errors: err,
-  };
-}, [input, target]);
-
-const accuracy = useMemo(() => {
-  if (input.length === target.length && input === target) return 100;
-  return calcAccuracy(correctChars, typedChars);
-}, [input, target, correctChars, typedChars])
-
-  const wpm = useMemo(
-    () => calcWpm(correctChars, Math.max(elapsed, 1)),
-    [correctChars, elapsed]
-  );
+    return {
+      typedChars: typedLen,
+      correctChars: correctLen,
+      errors: err,
+    };
+  }, [input, target]);
 
   function stopTimer() {
     if (timerRef.current !== null) {
@@ -84,44 +86,150 @@ const accuracy = useMemo(() => {
     }
   }
 
+  function focusInputSoon() {
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  }
+
+  function getNextPhrase(currentDifficulty: Difficulty, currentTarget: string) {
+    let next = pickText(currentDifficulty);
+
+    if (next === currentTarget) {
+      for (let i = 0; i < 10; i++) {
+        const candidate = pickText(currentDifficulty);
+        if (candidate !== currentTarget) {
+          next = candidate;
+          break;
+        }
+      }
+    }
+
+    return next;
+  }
+
+  function goToNextPhrase(nextDifficulty?: Difficulty) {
+    const difficultyToUse = nextDifficulty ?? difficulty;
+    const nextTarget = getNextPhrase(difficultyToUse, target);
+
+    setTarget(nextTarget);
+    setInput("");
+    focusInputSoon();
+  }
+
   function startGame() {
     stopTimer();
+    hasFinishedRef.current = false;
+
     setTarget(pickText(difficulty));
     setInput("");
     setElapsed(0);
+    setLevelProgress(0);
+    setSessionTypedChars(0);
+    setSessionCorrectChars(0);
+    setSessionErrors(0);
     setState("running");
-    setTimeout(() => inputRef.current?.focus(), 0);
     startTsRef.current = Date.now();
+
+    focusInputSoon();
 
     timerRef.current = window.setInterval(() => {
       const startTs = startTsRef.current ?? Date.now();
       const e = Math.floor((Date.now() - startTs) / 1000);
+
       setElapsed(e);
 
-      if (e >= durationSec) finishGame(e);
+      if (e >= durationSec) {
+        finishGame(e);
+      }
     }, 200);
   }
 
-  // ✅ robusto: permite finalizar usando o texto mais recente (evita salvar 1 char a menos)
+  function handlePhraseComplete(value: string) {
+    const phraseTypedLen = value.length;
+    const phraseCorrectLen = countCorrectChars(value, target);
+    const phraseErrors = computeErrors(value, target);
+    const finalAccuracy = calcAccuracy(phraseCorrectLen, phraseTypedLen);
+    const isCorrect = value === target && finalAccuracy >= 90;
+
+    setSessionTypedChars((prev) => prev + phraseTypedLen);
+    setSessionCorrectChars((prev) => prev + phraseCorrectLen);
+    setSessionErrors((prev) => prev + phraseErrors);
+
+    if (!isCorrect) {
+      setInput("");
+      focusInputSoon();
+      return;
+    }
+
+    const nextProgress = levelProgress + 1;
+
+    if (!autoLevelEnabled) {
+      setLevelProgress(nextProgress);
+      goToNextPhrase();
+      return;
+    }
+
+    if (difficulty === "easy" && nextProgress >= LEVEL_GOAL) {
+      setDifficulty("medium");
+      setLevelProgress(0);
+      setTarget(getNextPhrase("medium", target));
+      setInput("");
+      alert("Parabéns! Você avançou para o nível médio.");
+      focusInputSoon();
+      return;
+    }
+
+    if (difficulty === "medium" && nextProgress >= LEVEL_GOAL) {
+      setDifficulty("hard");
+      setLevelProgress(0);
+      setTarget(getNextPhrase("hard", target));
+      setInput("");
+      alert("Parabéns! Você avançou para o nível difícil.");
+      focusInputSoon();
+      return;
+    }
+
+    if (difficulty === "hard") {
+      const cappedProgress = Math.min(nextProgress, LEVEL_GOAL);
+      setLevelProgress(cappedProgress);
+      goToNextPhrase();
+      return;
+    }
+
+    setLevelProgress(nextProgress);
+    goToNextPhrase();
+  }
+
   function finishGame(finalElapsed?: number, finalInput?: string) {
+    if (hasFinishedRef.current) return;
+    hasFinishedRef.current = true;
+
     stopTimer();
+
     const e = typeof finalElapsed === "number" ? finalElapsed : elapsed;
 
-    const typed = finalInput ?? input;
-    const typedLen = typed.length;
-    const correctLen = countCorrectChars(typed, target);
-    const err = computeErrors(typed, target);
+    let finalTypedTotal = sessionTypedChars;
+    let finalCorrectTotal = sessionCorrectChars;
+    let finalErrorsTotal = sessionErrors;
+
+    if (finalInput !== undefined || input.length > 0) {
+      const partialTyped = finalInput ?? input;
+      finalTypedTotal += partialTyped.length;
+      finalCorrectTotal += countCorrectChars(partialTyped, target);
+      finalErrorsTotal += computeErrors(partialTyped, target);
+    }
 
     const result: TypingResult = {
       id: uid(),
       dateIso: new Date().toISOString(),
       difficulty,
       durationSec,
-      typedChars: typedLen,
-      correctChars: correctLen,
-      errors: err,
-      wpm: calcWpm(correctLen, Math.max(e, 1)),
-      accuracy: calcAccuracy(correctLen, typedLen),
+      typedChars: finalTypedTotal,
+      correctChars: finalCorrectTotal,
+      errors: finalErrorsTotal,
+      wpm: calcWpm(finalCorrectTotal, Math.max(e, 1)),
+      accuracy: calcAccuracy(finalCorrectTotal, finalTypedTotal),
     };
 
     saveResult(result);
@@ -131,9 +239,15 @@ const accuracy = useMemo(() => {
 
   function reset() {
     stopTimer();
+    hasFinishedRef.current = false;
+
     setState("idle");
     setInput("");
     setElapsed(0);
+    setLevelProgress(0);
+    setSessionTypedChars(0);
+    setSessionCorrectChars(0);
+    setSessionErrors(0);
     setTarget(pickText(difficulty));
   }
 
@@ -141,13 +255,16 @@ const accuracy = useMemo(() => {
     return () => stopTimer();
   }, []);
 
-  // ✅ render do alvo com realce
+  useEffect(() => {
+    if (state === "idle" || state === "finished") {
+      setTarget(pickText(difficulty));
+      setInput("");
+      setElapsed(0);
+    }
+  }, [difficulty, state]);
+
   const renderedTarget = useMemo(() => {
     const spans: ReactNode[] = [];
-
-
-
-
 
     for (let i = 0; i < target.length; i++) {
       const ch = target[i];
@@ -168,6 +285,23 @@ const accuracy = useMemo(() => {
     return spans;
   }, [target, input]);
 
+  const displayTypedChars = sessionTypedChars + typedChars;
+  const displayCorrectChars = sessionCorrectChars + correctChars;
+  const displayErrors = sessionErrors + errors;
+
+  const displayAccuracy = useMemo(() => {
+    return calcAccuracy(displayCorrectChars, displayTypedChars);
+  }, [displayCorrectChars, displayTypedChars]);
+
+  const displayWpm = useMemo(() => {
+    return calcWpm(displayCorrectChars, Math.max(elapsed, 1));
+  }, [displayCorrectChars, elapsed]);
+
+  const difficultyLabel =
+    difficulty === "easy" ? "Fácil" : difficulty === "medium" ? "Médio" : "Difícil";
+
+  const progressPercent = Math.min((levelProgress / LEVEL_GOAL) * 100, 100);
+
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: 16, fontFamily: "system-ui" }}>
       <h1 style={{ fontSize: 22, marginBottom: 8 }}>Mini Jogo de Digitação</h1>
@@ -177,7 +311,15 @@ const accuracy = useMemo(() => {
           Dificuldade:{" "}
           <select
             value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+            onChange={(e) => {
+              setDifficulty(e.target.value as Difficulty);
+              setLevelProgress(0);
+              setSessionTypedChars(0);
+              setSessionCorrectChars(0);
+              setSessionErrors(0);
+              setInput("");
+              setElapsed(0);
+            }}
             disabled={state === "running"}
           >
             <option value="easy">Fácil</option>
@@ -200,12 +342,12 @@ const accuracy = useMemo(() => {
         </label>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-
           {state !== "running" ? (
             <button onClick={startGame}>Iniciar</button>
           ) : (
             <button onClick={() => finishGame()}>Finalizar</button>
           )}
+
           <button onClick={reset} disabled={state === "running"}>
             Reset
           </button>
@@ -214,6 +356,64 @@ const accuracy = useMemo(() => {
         <div style={{ marginLeft: "auto" }}>
           <strong>Tempo:</strong> {Math.min(elapsed, durationSec)}s / {durationSec}s
         </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          alignItems: "center",
+          flexWrap: "wrap",
+          marginBottom: 12,
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: 420 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: 6,
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            <span>Nível atual: {difficultyLabel}</span>
+            <span>
+              {levelProgress} / {LEVEL_GOAL}
+            </span>
+          </div>
+
+          <div
+            style={{
+              width: "100%",
+              height: 14,
+              background: "rgba(255,255,255,0.12)",
+              borderRadius: 999,
+              overflow: "hidden",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+            aria-label={`Progressão: ${levelProgress} de ${LEVEL_GOAL}`}
+          >
+            <div
+              style={{
+                width: `${progressPercent}%`,
+                height: "100%",
+                background: "linear-gradient(90deg, #22c55e, #3b82f6)",
+                transition: "width 0.25s ease",
+              }}
+            />
+          </div>
+        </div>
+
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={autoLevelEnabled}
+            onChange={(e) => setAutoLevelEnabled(e.target.checked)}
+            disabled={state === "running"}
+          />
+          Subir nível automaticamente
+        </label>
       </div>
 
       <div
@@ -232,46 +432,42 @@ const accuracy = useMemo(() => {
       </div>
 
       <textarea
-  value={input}
-  onChange={(e) => {
-    // remove ENTER / quebra de linha
-    let value = e.target.value.replace(/\r?\n/g, "");
+        value={input}
+        onChange={(e) => {
+          let value = e.target.value.replace(/\r?\n/g, "");
 
-    // trava no tamanho do target (impede 1 char a mais)
-    if (value.length > target.length) {
-      value = value.slice(0, target.length);
-    }
+          if (value.length > target.length) {
+            value = value.slice(0, target.length);
+          }
 
-    setInput(value);
+          setInput(value);
 
-    // finaliza exatamente no tamanho correto
-    if (state === "running" && value.length === target.length) {
-      finishGame(undefined, value);
-    }
-  }}
-  disabled={state !== "running"}
-  rows={3}
-  style={{ width: "100%", fontSize: 16, padding: 10 }}
-  placeholder={state === "running" ? "Digite aqui..." : "Clique em Iniciar para começar"}
-  ref={inputRef}
-/>
-
+          if (state === "running" && value.length === target.length) {
+            handlePhraseComplete(value);
+          }
+        }}
+        disabled={state !== "running"}
+        rows={3}
+        style={{ width: "100%", fontSize: 16, padding: 10 }}
+        placeholder={state === "running" ? "Digite aqui..." : "Clique em Iniciar para começar"}
+        ref={inputRef}
+      />
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 12 }}>
         <div>
-          <strong>WPM:</strong> {format2(wpm)}
+          <strong>WPM:</strong> {format2(displayWpm)}
         </div>
         <div>
-          <strong>Precisão:</strong> {format2(accuracy)}%
+          <strong>Precisão:</strong> {format2(displayAccuracy)}%
         </div>
         <div>
-          <strong>Erros:</strong> {errors}
+          <strong>Erros:</strong> {displayErrors}
         </div>
         <div>
-          <strong>Corretos:</strong> {correctChars}
+          <strong>Corretos:</strong> {displayCorrectChars}
         </div>
         <div>
-          <strong>Digitados:</strong> {typedChars}
+          <strong>Digitados:</strong> {displayTypedChars}
         </div>
       </div>
 
@@ -298,10 +494,18 @@ const accuracy = useMemo(() => {
             <thead>
               <tr>
                 <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: 8 }}>Data</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: 8 }}>Dificuldade</th>
-                <th style={{ textAlign: "right", borderBottom: "1px solid #ddd", padding: 8 }}>WPM</th>
-                <th style={{ textAlign: "right", borderBottom: "1px solid #ddd", padding: 8 }}>Precisão</th>
-                <th style={{ textAlign: "right", borderBottom: "1px solid #ddd", padding: 8 }}>Erros</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: 8 }}>
+                  Dificuldade
+                </th>
+                <th style={{ textAlign: "right", borderBottom: "1px solid #ddd", padding: 8 }}>
+                  WPM
+                </th>
+                <th style={{ textAlign: "right", borderBottom: "1px solid #ddd", padding: 8 }}>
+                  Precisão
+                </th>
+                <th style={{ textAlign: "right", borderBottom: "1px solid #ddd", padding: 8 }}>
+                  Erros
+                </th>
               </tr>
             </thead>
             <tbody>

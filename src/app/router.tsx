@@ -11,7 +11,7 @@ import TypingRoute from "./routes/TypingRoute";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginRoute /> },
-   {
+  {
     path: "/",
     element: (
       <RequireStudent>
@@ -20,16 +20,12 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <HomeRoute /> },
-
       { path: "tutoriais", element: <TutorialRoute /> },
       { path: "tutoriais/:tutorialId", element: <TutorialDetailRoute /> },
-
       { path: "jogo", element: <TypingRoute /> },
     ],
   },
 ]);
-
-
 
 
 

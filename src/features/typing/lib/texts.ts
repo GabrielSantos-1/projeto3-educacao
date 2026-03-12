@@ -1,27 +1,101 @@
 import type { Difficulty } from "../types";
 
-const EASY = [
-  "o rato roeu a roupa do rei de roma",
-  "hoje eu vou aprender a digitar melhor",
-  "digitar com calma e com precisao",
-  "estou digitando melhor agora",
-  "estou pronto para o proximo nivel"
-  
-];
+const TEXTS_BY_DIFFICULTY: Record<Difficulty, string[]> = {
+  easy: [
+    "o rato roeu a roupa do rei de roma",
+    "hoje eu vou aprender a digitar melhor",
+    "digitar com calma e com precisao",
+    "estou digitando melhor agora",
+    "estou pronto para o proximo nivel",
+    "o mouse serve para clicar na tela",
+    "o teclado ajuda a escrever palavras",
+    "eu gosto de aprender no computador",
+    "a tela mostra imagens e textos",
+    "cada tecla tem uma funcao",
+    "o aluno abriu o programa com sucesso",
+    "a aula de hoje foi muito boa",
+    "o computador liga e mostra a tela",
+    "eu consigo treinar um pouco por dia",
+    "o teclado tem letras numeros e sinais",
+    "aprender devagar tambem e aprender",
+    "eu vou melhorar com mais pratica",
+    "clicar no icone abre o aplicativo",
+    "a internet ajuda a buscar informacoes",
+    "um texto curto tambem ensina bastante",
+    "a tela do computador esta ligada",
+    "eu posso estudar no meu ritmo",
+    "o jogo ajuda a praticar digitacao",
+    "cada frase aumenta meu aprendizado",
+    "eu presto atencao em cada letra",
+    "o estudo diario traz bons resultados",
+    "treinar com foco ajuda bastante",
+    "o aluno leu a frase com calma",
+    "a pratica melhora a coordenacao",
+    "eu estou aprendendo passo a passo",
+  ],
 
-const MEDIUM = [
-  "aprender a digitar exige pratica e consistencia todos os dias",
-  "teclas, espacos e pontuacao fazem parte do treino",
-  "o objetivo e reduzir erros e aumentar a velocidade"
-];
+  medium: [
+    "aprender a digitar exige pratica e consistencia todos os dias",
+    "teclas, espacos e pontuacao fazem parte do treino",
+    "o objetivo e reduzir erros e aumentar a velocidade",
+    "usar o computador com calma ajuda no aprendizado",
+    "uma boa digitacao melhora o estudo e o trabalho",
+    "treinar pequenos textos ajuda a ganhar confianca",
+    "a pratica frequente desenvolve memoria nas maos",
+    "prestar atencao aos erros ajuda a evoluir mais rapido",
+    "ler antes de digitar ajuda a reduzir falhas durante o treino",
+    "usar corretamente o teclado facilita atividades escolares e profissionais",
+    "a repeticao consciente torna a digitacao mais natural com o tempo",
+    "cada tentativa correta fortalece a confianca do aluno",
+    "erros fazem parte do processo de aprendizagem e podem ensinar muito",
+    "o treino constante ajuda a melhorar velocidade, foco e precisao",
+    "digitar textos variados prepara melhor para tarefas do dia a dia",
+    "o uso do computador exige atencao, paciencia e pratica continua",
+    "a concentracao durante a atividade reduz erros simples de digitacao",
+    "quanto mais organizado o treino, melhores tendem a ser os resultados",
+    "a pratica com frases completas ajuda a desenvolver ritmo e leitura",
+    "usar frases diferentes evita repeticao excessiva e melhora o desempenho",
+    "o aluno deve observar as palavras antes de tentar escrever rapido",
+    "uma boa postura tambem ajuda no conforto durante a digitacao",
+    "treinar alguns minutos por dia pode gerar melhora consistente",
+    "a evolucao aparece quando existe rotina e acompanhamento do progresso",
+    "cada novo texto amplia a familiaridade com palavras diferentes",
+  ],
 
-const HARD = [
-  "seguranca digital comeca com habitos: senhas fortes, 2fa e atencao a links suspeitos",
-  "um bom texto para treino tem acentos, virgulas, e diferentes comprimentos de palavras",
-  "pratique sem pressa, meca resultados e ajuste o foco onde erra mais"
-];
+  hard: [
+    "seguranca digital comeca com habitos: senhas fortes, 2fa e atencao a links suspeitos",
+    "um bom texto para treino tem acentos, virgulas, e diferentes comprimentos de palavras",
+    "pratique sem pressa, meca resultados e ajuste o foco onde erra mais",
+    "antes de compartilhar dados pessoais, verifique se o site possui contexto confiavel",
+    "digitar com precisao e constancia tende a gerar melhores resultados do que apenas correr",
+    "ao utilizar recursos online, leia com cuidado mensagens, avisos e instrucoes da plataforma",
+    "o aprendizado digital melhora quando existe repeticao, feedback e acompanhamento do progresso",
+    "reconhecer tentativas de fraude online exige leitura atenta, calma e senso critico",
+    "ao acessar servicos pela internet, valide informacoes antes de inserir dados sensiveis",
+    "a experiencia do usuario melhora quando a interface oferece clareza, foco e resposta visual",
+    "uma rotina de estudos bem estruturada ajuda a consolidar habilidades tecnicas com mais eficiencia",
+    "erros recorrentes devem ser analisados com cuidado para gerar ajustes no processo de aprendizagem",
+    "compreender o contexto de cada frase ajuda a manter consistencia durante a digitacao",
+    "a pratica com textos mais longos desenvolve resistencia, precisao e fluidez",
+    "seguranca da informacao depende tanto de tecnologia quanto de comportamento consciente",
+    "um ambiente digital seguro envolve atualizacao, autenticacao e verificacao constante",
+    "a atencao aos detalhes reduz o risco de falhas simples durante tarefas importantes",
+    "avaliar desempenho por precisao e velocidade oferece uma visao mais equilibrada do progresso",
+    "o treinamento continuo fortalece habitos corretos e reduz a incidencia de erros repetitivos",
+    "a combinacao entre leitura, digitacao e revisao torna o aprendizado mais completo",
+    "interfaces educacionais eficazes precisam ser claras, acessiveis e objetivas",
+    "cada tentativa bem executada reforca padroes motores e cognitivos relevantes",
+    "desenvolver habilidade digital tambem exige disciplina, observacao e autonomia",
+    "a melhoria sustentavel acontece quando o aluno entende seus erros e ajusta o metodo",
+    "um sistema educacional bem pensado acompanha progresso, dificuldades e conquistas do usuario",
+  ],
+};
+
+export function getTextsByDifficulty(difficulty: Difficulty): string[] {
+  return TEXTS_BY_DIFFICULTY[difficulty];
+}
 
 export function pickText(difficulty: Difficulty): string {
-  const pool = difficulty === "easy" ? EASY : difficulty === "medium" ? MEDIUM : HARD;
+  const pool = getTextsByDifficulty(difficulty);
   return pool[Math.floor(Math.random() * pool.length)];
 }
